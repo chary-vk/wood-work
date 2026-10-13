@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-parchment: #f7f2e9;
+  --color-parchment-dark: #ebe3d4;
+  --color-teak: #6b4423;
+  --color-teak-light: #8b5a2b;
+  --color-teak-dark: #3d2512;
+  --color-gold: #c9a227;
+  --color-gold-light: #e4c04a;
+  --color-forest: #1e3d2f;
+  --color-forest-light: #2d5a45;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-telugu: 'Noto Sans Telugu', 'DM Sans', system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-parchment);
+  color: var(--color-teak-dark);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-telugu {
+  font-family: var(--font-telugu);
+}
+
+.wood-grain {
+  background-image:
+    linear-gradient(
+      135deg,
+      rgba(61, 37, 18, 0.92) 0%,
+      rgba(30, 61, 47, 0.88) 50%,
+      rgba(61, 37, 18, 0.9) 100%
+    ),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+}
