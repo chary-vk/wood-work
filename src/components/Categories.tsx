@@ -1,17 +1,30 @@
+'use client'
+
+import { fetchCategories } from '@/api/categories'
+import { categoryBlurb, categoryLabel } from '@/lib/category-types'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { site, type CategoryId } from '../content/site'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 
 type Props = {
-  onSelectCategory: (id: CategoryId) => void
+  onSelectCategory: (slug: string) => void
 }
 
 export function Categories({ onSelectCategory }: Props) {
   const { lang, t } = useLanguage()
+  const [categories, setCategories] = useState<
+    Awaited<ReturnType<typeof fetchCategories>>
+  >([])
 
-  const handleEnquire = (id: CategoryId) => {
-    onSelectCategory(id)
+  useEffect(() => {
+    fetchCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]))
+  }, [])
+
+  const handleEnquire = (slug: string) => {
+    onSelectCategory(slug)
     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
   }
 
@@ -38,51 +51,48 @@ export function Categories({ onSelectCategory }: Props) {
         </motion.div>
 
         <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {site.categories.map((cat, index) => {
-            const copy = t.categories.items[cat.id]
-            return (
-              <motion.li
-                key={cat.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.45, delay: index * 0.06 }}
-              >
-                <article className="group overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-teak/10 transition hover:shadow-xl">
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <img
-                      src={cat.image}
-                      alt=""
-                      className="h-full w-full object-cover contrast-[1.04] saturate-[1.04] transition duration-500 group-hover:scale-105"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-teak-dark/80 via-transparent to-transparent" />
-                    <h3
-                      className={`absolute bottom-4 left-4 right-4 text-xl font-semibold text-white ${lang === 'te' ? 'font-telugu' : 'font-display'}`}
-                    >
-                      {copy.title}
-                    </h3>
-                  </div>
-                  <div className="p-5">
-                    <p
-                      className={`text-sm text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
-                    >
-                      {copy.blurb}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => handleEnquire(cat.id)}
-                      className={`mt-4 inline-flex items-center gap-1 text-sm font-semibold text-forest transition hover:text-forest-light ${lang === 'te' ? 'font-telugu' : ''}`}
-                    >
-                      {t.categories.enquire}
-                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </button>
-                  </div>
-                </article>
-              </motion.li>
-            )
-          })}
+          {categories.map((cat, index) => (
+            <motion.li
+              key={cat.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.45, delay: index * 0.06 }}
+            >
+              <article className="group overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-teak/10 transition hover:shadow-xl">
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    src={cat.imageUrl ?? '/images/craft/03-doors.jpg'}
+                    alt=""
+                    className="h-full w-full object-cover contrast-[1.04] saturate-[1.04] transition duration-500 group-hover:scale-105"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-teak-dark/80 via-transparent to-transparent" />
+                  <h3
+                    className={`absolute bottom-4 left-4 right-4 text-xl font-semibold text-white ${lang === 'te' ? 'font-telugu' : 'font-display'}`}
+                  >
+                    {categoryLabel(cat, lang)}
+                  </h3>
+                </div>
+                <div className="p-5">
+                  <p
+                    className={`text-sm text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
+                  >
+                    {categoryBlurb(cat, lang)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleEnquire(cat.slug)}
+                    className={`mt-4 inline-flex items-center gap-1 text-sm font-semibold text-forest transition hover:text-forest-light ${lang === 'te' ? 'font-telugu' : ''}`}
+                  >
+                    {t.categories.enquire}
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </button>
+                </div>
+              </article>
+            </motion.li>
+          ))}
         </ul>
       </div>
     </section>

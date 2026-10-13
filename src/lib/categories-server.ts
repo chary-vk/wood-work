@@ -64,6 +64,9 @@ export async function createCategory(input: {
   const slug = normalizeSlug(input.slug)
   validateSlug(slug)
   if (await categorySlugExists(slug)) throw new Error('Category slug already exists')
+  if (!input.labelEn.trim() || !input.labelTe.trim()) {
+    throw new Error('English and Telugu labels are required')
+  }
 
   const rows = await db.select({ n: sql<number>`count(*)` }).from(galleryCategories)
   const sortOrder = input.sortOrder ?? Number(rows[0]?.n ?? 0)

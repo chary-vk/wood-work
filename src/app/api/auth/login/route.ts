@@ -1,8 +1,5 @@
-import {
-  adminCredentialsValid,
-  createSessionToken,
-  SESSION_COOKIE,
-} from '@/lib/auth'
+import { createSessionToken, SESSION_COOKIE } from '@/lib/auth'
+import { authenticateAdmin } from '@/lib/users-server'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -10,12 +7,13 @@ export async function POST(req: Request) {
   const username = body.username?.trim() ?? ''
   const password = body.password ?? ''
 
-  if (!adminCredentialsValid(username, password)) {
+  const user = await authenticateAdmin(username, password)
+  if (!user) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  const token = await createSessionToken()
-  const res = NextResponse.json({ ok: true })
+  const token = await createSessionToken(user.id, user.username)
+  const res = NextResponse.json({ ok: true, username: user.username })
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

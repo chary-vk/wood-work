@@ -18,3 +18,13 @@ export function categoryLabel(cat: GalleryCategory, lang: Lang) {
 export function categoryBlurb(cat: GalleryCategory, lang: Lang) {
   return lang === 'te' ? cat.blurbTe : cat.blurbEn
 }
+
+export function labelForSlug(
+  categories: GalleryCategory[],
+  slug: string,
+  lang: Lang,
+) {
+  const cat = categories.find((c) => c.slug === slug)
+  if (cat) return categoryLabel(cat, lang)
+  return slug
+}

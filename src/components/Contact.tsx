@@ -1,18 +1,16 @@
+'use client'
+
+import { fetchCategories } from '@/api/categories'
+import { categoryLabel } from '@/lib/category-types'
 import { motion } from 'framer-motion'
 import { MessageCircle, Phone } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import {
-  site,
-  telHref,
-  whatsappHref,
-  type CategoryId,
-} from '../content/site'
-import { categoryLabel } from '../i18n/translations'
+import { type FormEvent, useEffect, useState } from 'react'
+import { site, telHref, whatsappHref } from '../content/site'
 import { useLanguage } from '../i18n/LanguageContext'
 
 type Props = {
-  selectedCategory: CategoryId | ''
-  onCategoryChange: (id: CategoryId | '') => void
+  selectedCategory: string
+  onCategoryChange: (slug: string) => void
 }
 
 export function Contact({ selectedCategory, onCategoryChange }: Props) {
@@ -20,11 +18,21 @@ export function Contact({ selectedCategory, onCategoryChange }: Props) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
+  const [categories, setCategories] = useState<
+    Awaited<ReturnType<typeof fetchCategories>>
+  >([])
+
+  useEffect(() => {
+    fetchCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]))
+  }, [])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    const categoryText = selectedCategory
-      ? categoryLabel(lang, selectedCategory)
+    const cat = categories.find((c) => c.slug === selectedCategory)
+    const categoryText = cat
+      ? categoryLabel(cat, lang)
       : t.contact.form.selectCategory
     const body = t.whatsappPrefill({
       name: name || '—',
@@ -50,57 +58,46 @@ export function Contact({ selectedCategory, onCategoryChange }: Props) {
             {t.contact.title}
           </h2>
           <p
-            className={`mx-auto mt-3 max-w-xl text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
+            className={`mx-auto mt-3 max-w-2xl text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
           >
             {t.contact.subtitle}
           </p>
         </motion.div>
 
         <div className="mt-12 grid gap-10 lg:grid-cols-2">
-          <div>
+          <motion.div
+            initial={{ opacity: 0, x: -12 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="space-y-6"
+          >
             <h3
-              className={`text-lg font-semibold text-teak-dark ${lang === 'te' ? 'font-telugu' : 'font-display'}`}
+              className={`text-xl font-semibold text-teak-dark ${lang === 'te' ? 'font-telugu' : 'font-display'}`}
             >
               {t.contact.callUs}
             </h3>
-            <ul className="mt-4 space-y-4">
-              {site.contacts.map((contact) => (
-                <li
-                  key={contact.phone}
-                  className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-teak/10"
-                >
-                  <p className="font-semibold text-teak-dark">{contact.name}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-wide text-forest">
-                    {contact.display}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <a
-                      href={telHref(contact.phone)}
-                      className="inline-flex items-center gap-2 rounded-full bg-gold px-4 py-2 text-sm font-semibold text-teak-dark transition hover:bg-gold-light"
-                    >
-                      <Phone className="h-4 w-4" />
-                      {t.callNow}
-                    </a>
-                    <a
-                      href={whatsappHref(
-                        lang === 'te'
-                          ? `నమస్కారం, ${contact.name} గారితో మాట్లాడాలనుకుంటున్నాను.`
-                          : `Hello, I would like to speak with ${contact.name}.`,
-                        `91${contact.phone}`,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-forest/30 px-4 py-2 text-sm font-semibold text-forest transition hover:bg-forest/5"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      {t.whatsapp}
-                    </a>
-                  </div>
+            <ul className="space-y-4">
+              {site.contacts.map((c) => (
+                <li key={c.phone}>
+                  <a
+                    href={telHref(c.phone)}
+                    className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-md ring-1 ring-teak/10 transition hover:ring-teak/25"
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-forest/10 text-forest">
+                      <Phone className="h-5 w-5" />
+                    </span>
+                    <span>
+                      <span className="block font-medium text-teak-dark">
+                        {c.name}
+                      </span>
+                      <span className="text-teak">{c.display}</span>
+                    </span>
+                  </a>
                 </li>
               ))}
             </ul>
 
-            <div className="mt-8 overflow-hidden rounded-2xl shadow-md ring-1 ring-teak/10">
+            <div className="overflow-hidden rounded-2xl ring-1 ring-teak/10">
               <iframe
                 title={t.contact.mapTitle}
                 src={site.mapsEmbedUrl}
@@ -108,26 +105,18 @@ export function Contact({ selectedCategory, onCategoryChange }: Props) {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
-              <a
-                href={site.mapsLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`block bg-white px-4 py-3 text-center text-sm font-medium text-forest hover:underline ${lang === 'te' ? 'font-telugu' : ''}`}
-              >
-                {site.address[lang]} — Google Maps
-              </a>
             </div>
-          </div>
+          </motion.div>
 
           <motion.form
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: 12 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             onSubmit={handleSubmit}
-            className="rounded-2xl bg-white p-6 shadow-md ring-1 ring-teak/10 md:p-8"
+            className="rounded-2xl bg-white p-6 shadow-lg ring-1 ring-teak/10 md:p-8"
           >
             <h3
-              className={`text-lg font-semibold text-teak-dark ${lang === 'te' ? 'font-telugu' : 'font-display'}`}
+              className={`text-xl font-semibold text-teak-dark ${lang === 'te' ? 'font-telugu' : 'font-display'}`}
             >
               {t.contact.sendEnquiry}
             </h3>
@@ -139,7 +128,6 @@ export function Contact({ selectedCategory, onCategoryChange }: Props) {
                 {t.contact.form.name}
               </span>
               <input
-                type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-teak/20 bg-parchment/50 px-4 py-3 text-teak-dark outline-none ring-forest focus:ring-2"
@@ -154,9 +142,9 @@ export function Contact({ selectedCategory, onCategoryChange }: Props) {
                 {t.contact.form.phone}
               </span>
               <input
-                type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                type="tel"
                 className="mt-1 w-full rounded-xl border border-teak/20 bg-parchment/50 px-4 py-3 text-teak-dark outline-none ring-forest focus:ring-2"
                 autoComplete="tel"
               />
@@ -170,15 +158,13 @@ export function Contact({ selectedCategory, onCategoryChange }: Props) {
               </span>
               <select
                 value={selectedCategory}
-                onChange={(e) =>
-                  onCategoryChange((e.target.value || '') as CategoryId | '')
-                }
+                onChange={(e) => onCategoryChange(e.target.value || '')}
                 className={`mt-1 w-full rounded-xl border border-teak/20 bg-parchment/50 px-4 py-3 text-teak-dark outline-none ring-forest focus:ring-2 ${lang === 'te' ? 'font-telugu' : ''}`}
               >
                 <option value="">{t.contact.form.selectCategory}</option>
-                {site.categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {t.categories.items[c.id].title}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.slug}>
+                    {categoryLabel(c, lang)}
                   </option>
                 ))}
               </select>

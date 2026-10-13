@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm'
 import { hashPassword } from './password'
 import { db } from './db'
+import { adminUsers } from './schema'
 
 let ready: Promise<void> | null = null
 
@@ -29,30 +31,22 @@ const STATEMENTS = [
   )`,
 ]
 
-const DEFAULT_CATEGORIES: Array<{
-  slug: string
-  labelEn: string
-  labelTe: string
-  blurbEn: string
-  blurbTe: string
-  imageUrl: string
-  sortOrder: number
-}> = [
+const DEFAULT_CATEGORIES = [
   {
     slug: 'doorFrames',
     labelEn: 'Door frames',
-    labelTe: 'తలుపు చౌకట్లు',
+    labelTe: 'చౌకట్లు',
     blurbEn: 'Solid teak chaukats built to last generations.',
-    blurbTe: 'తరతరాలపాటు నిలిచే బ-solid teak చౌకట్లు.',
+    blurbTe: 'బలమైన తేక చౌకట్లు — దీర్ఘకాలిక నాణ్యత.',
     imageUrl: '/images/craft/02-door-frames.jpg',
     sortOrder: 0,
   },
   {
     slug: 'doors',
     labelEn: 'Doors',
-    labelTe: 'తలుపులు',
-    blurbEn: 'Carved and plain teak doors for homes and temples.',
-    blurbTe: 'ఇళ్లు, దేవాలయాలకు చెక్కిన మరియు సాధారణ teak తలుపులు.',
+    labelTe: 'దర్వాజాలు',
+    blurbEn: 'Hand-carved main doors and custom designs.',
+    blurbTe: 'చేతిపని కళాకృతులతో అలంకరించిన ప్రధాన దర్వాజాలు.',
     imageUrl: '/images/craft/03-doors.jpg',
     sortOrder: 1,
   },
@@ -60,8 +54,8 @@ const DEFAULT_CATEGORIES: Array<{
     slug: 'windows',
     labelEn: 'Windows',
     labelTe: 'కిటికీలు',
-    blurbEn: 'Teak window frames with clean joinery.',
-    blurbTe: 'శుభ్రమైన joinery తో teak కిటికీ చౌకats.',
+    blurbEn: 'Classic wooden windows with clean finishing.',
+    blurbTe: 'సంప్రదాయ కలప కిటికీలు — నాణ్యమైన ఫినిషింగ్.',
     imageUrl: '/images/craft/04-windows.jpg',
     sortOrder: 2,
   },
@@ -69,8 +63,8 @@ const DEFAULT_CATEGORIES: Array<{
     slug: 'windowShutters',
     labelEn: 'Window shutters',
     labelTe: 'కిటికీ రెక్కలు',
-    blurbEn: 'Traditional shutters matched to your frames.',
-    blurbTe: 'మీ చౌకatsకు సరిపడే సంప్రదాయ రెక్కలు.',
+    blurbEn: 'Louvered shutters for light, air, and privacy.',
+    blurbTe: 'వెలుతురు, గాలి మరియు గోప్యతకు రెక్కలు.',
     imageUrl: '/images/craft/05-window-shutters.jpg',
     sortOrder: 3,
   },
@@ -78,21 +72,21 @@ const DEFAULT_CATEGORIES: Array<{
     slug: 'beds',
     labelEn: 'Beds',
     labelTe: 'మంచాలు',
-    blurbEn: 'Sturdy teak cots and bed frames.',
-    blurbTe: 'బలమైన teak మంచాలు మరియు bed frames.',
+    blurbEn: 'Strong bed frames with traditional craftsmanship.',
+    blurbTe: 'బలమైన తేక మంచాలు — సంప్రదాయ చేతిపని.',
     imageUrl: '/images/craft/06-beds.jpg',
     sortOrder: 4,
   },
   {
     slug: 'tables',
     labelEn: 'Tables',
-    labelTe: 'టేబుల్స్',
-    blurbEn: 'Dining and work tables in pure teak.',
-    blurbTe: 'శుద్ధ teakలో dining మరియు work tables.',
+    labelTe: 'టేబుల్లు',
+    blurbEn: 'Dining and utility tables in pure teak.',
+    blurbTe: 'శుద్ధ తేకలో డైనింగ్ మరియు ఉపయోగ టేబుల్లు.',
     imageUrl: '/images/craft/07-tables.jpg',
     sortOrder: 5,
   },
-]
+] as const
 
 async function seedDefaults() {
   for (const cat of DEFAULT_CATEGORIES) {
@@ -113,18 +107,18 @@ async function seedDefaults() {
     })
   }
 
-  const users = await db.$client.execute(
-    'SELECT COUNT(*) AS n FROM admin_users',
-  )
-  const count = Number(users.rows[0]?.n ?? 0)
-  if (count === 0) {
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(adminUsers)
+  if (Number(n) === 0) {
     const username = process.env.ADMIN_USERNAME ?? 'admin'
     const password = process.env.ADMIN_PASSWORD ?? 'Shankarayya@2026'
     const passwordHash = await hashPassword(password)
-    await db.$client.execute({
-      sql: `INSERT INTO admin_users (id, username, password_hash, created_at)
-            VALUES (?, ?, ?, ?)`,
-      args: ['bootstrap-admin', username, passwordHash, new Date().toISOString()],
+    await db.insert(adminUsers).values({
+      id: 'bootstrap-admin',
+      username,
+      passwordHash,
+      createdAt: new Date().toISOString(),
     })
   }
 }
@@ -132,8 +126,8 @@ async function seedDefaults() {
 export function ensureDb() {
   if (!ready) {
     ready = (async () => {
-      for (const sql of STATEMENTS) {
-        await db.$client.execute(sql)
+      for (const sqlText of STATEMENTS) {
+        await db.$client.execute(sqlText)
       }
       await seedDefaults()
     })()

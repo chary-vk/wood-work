@@ -1,9 +1,9 @@
-import type { CategoryId } from '../content/site'
+import type { GalleryCategory } from './category-types'
 
 export type GalleryItem = {
   id: string
   path: string
-  category: CategoryId
+  category: string
   title: string
   uploadedAt: string
   year: number
@@ -22,17 +22,8 @@ export type GalleryPayload = {
   items: GalleryItem[]
   folders: GalleryFolder[]
   years: number[]
-  categories: CategoryId[]
+  categories: GalleryCategory[]
 }
-
-const CATEGORIES: CategoryId[] = [
-  'doorFrames',
-  'doors',
-  'windows',
-  'windowShutters',
-  'beds',
-  'tables',
-]
 
 export function photoUrl(pathOrUrl: string) {
   if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
@@ -42,7 +33,10 @@ export function photoUrl(pathOrUrl: string) {
   return `/gallery/images/${pathOrUrl}`
 }
 
-export function buildGalleryPayload(items: GalleryItem[]): GalleryPayload {
+export function buildGalleryPayload(
+  items: GalleryItem[],
+  categories: GalleryCategory[],
+): GalleryPayload {
   const sorted = [...items].sort(
     (a, b) =>
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
@@ -70,7 +64,6 @@ export function buildGalleryPayload(items: GalleryItem[]): GalleryPayload {
     items: sorted,
     folders,
     years: [...new Set(sorted.map((i) => i.year))].sort((a, b) => b - a),
-    categories: CATEGORIES,
+    categories,
   }
 }
-

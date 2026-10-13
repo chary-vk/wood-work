@@ -62,7 +62,7 @@ export async function addGalleryPhotos(
   category: string,
   title?: string,
 ) {
-  if (!(await categorySlugExists(category))) {
+  if (!(await categorySlugExists(category.trim()))) {
     throw new Error('Invalid category')
   }
   const uploadedAt = new Date().toISOString()

@@ -1,13 +1,19 @@
+'use client'
+
 import { motion } from 'framer-motion'
 import { FolderOpen, ImageIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import type { CategoryId } from '../content/site'
 import {
   fetchGallery,
   photoUrl,
   type GalleryFolder,
   type GalleryItem,
 } from '../api/gallery'
+import {
+  categoryLabel,
+  labelForSlug,
+  type GalleryCategory,
+} from '@/lib/category-types'
 import { useLanguage } from '../i18n/LanguageContext'
 
 function monthLabel(lang: string, year: number, month: number) {
@@ -40,9 +46,10 @@ function groupFiltered(items: GalleryItem[]): GalleryFolder[] {
 export function Gallery() {
   const { lang, t } = useLanguage()
   const [items, setItems] = useState<GalleryItem[]>([])
+  const [categories, setCategories] = useState<GalleryCategory[]>([])
   const [years, setYears] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
-  const [category, setCategory] = useState<CategoryId | 'all'>('all')
+  const [category, setCategory] = useState<string | 'all'>('all')
   const [year, setYear] = useState<number | 'all'>('all')
   const [month, setMonth] = useState<number | 'all'>('all')
 
@@ -50,6 +57,7 @@ export function Gallery() {
     fetchGallery()
       .then((data) => {
         setItems(data.items)
+        setCategories(data.categories)
         setYears(data.years)
       })
       .catch(() => setItems([]))
@@ -103,24 +111,13 @@ export function Gallery() {
             </span>
             <select
               value={category}
-              onChange={(e) =>
-                setCategory(e.target.value as CategoryId | 'all')
-              }
+              onChange={(e) => setCategory(e.target.value)}
               className="rounded-xl border border-teak/20 bg-white px-3 py-2 text-sm text-teak-dark"
             >
               <option value="all">{t.gallery.allCategories}</option>
-              {(
-                [
-                  'doorFrames',
-                  'doors',
-                  'windows',
-                  'windowShutters',
-                  'beds',
-                  'tables',
-                ] as CategoryId[]
-              ).map((id) => (
-                <option key={id} value={id}>
-                  {t.categories.items[id].title}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.slug}>
+                  {categoryLabel(cat, lang)}
                 </option>
               ))}
             </select>
@@ -213,7 +210,7 @@ export function Gallery() {
                         <p
                           className={`mt-1 text-xs text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
                         >
-                          {t.categories.items[item.category].title}
+                          {labelForSlug(categories, item.category, lang)}
                         </p>
                         <p className="mt-1 text-xs text-teak/60">
                           {new Date(item.uploadedAt).toLocaleString(

@@ -10,10 +10,9 @@ import { Header } from '@/components/Header'
 import { Hero } from '@/components/Hero'
 import { WhatsAppFloat } from '@/components/WhatsAppFloat'
 import { WhyUs } from '@/components/WhyUs'
-import type { CategoryId } from '@/content/site'
 
 export function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryId | ''>('')
+  const [selectedCategory, setSelectedCategory] = useState('')
 
   return (
     <>
