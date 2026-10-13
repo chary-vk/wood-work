@@ -1,4 +1,33 @@
 import type { GalleryCategory } from './category-types'
+import { labelForSlug } from './category-types'
+import type { Lang } from '@/i18n/translations'
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export function isUuidLike(value: string) {
+  return UUID_RE.test(value.trim())
+}
+
+/** Human-readable caption — never show raw photo ids as titles. */
+export function galleryDisplayTitle(
+  item: GalleryItem,
+  categories: GalleryCategory[],
+  lang: Lang,
+) {
+  const raw = item.title.trim()
+  if (raw && !isUuidLike(raw)) return raw
+  const fromPath = filenameStem(item.path)
+  if (fromPath && !isUuidLike(fromPath) && !/^\d{10,}-/.test(fromPath)) {
+    return fromPath.replace(/[-_]+/g, ' ')
+  }
+  return labelForSlug(categories, item.category, lang)
+}
+
+function filenameStem(pathOrUrl: string) {
+  const segment = pathOrUrl.split('/').pop() ?? ''
+  return segment.replace(/\.[^.]+$/, '').replace(/^\d+-/, '')
+}
 
 export type GalleryItem = {
   id: string

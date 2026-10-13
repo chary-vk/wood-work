@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { FolderOpen, ImageIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -14,7 +14,12 @@ import {
   labelForSlug,
   type GalleryCategory,
 } from '@/lib/category-types'
+import {
+  galleryDisplayTitle,
+  isUuidLike,
+} from '@/lib/galleryUtils'
 import { useLanguage } from '../i18n/LanguageContext'
+import { GalleryLightbox } from './GalleryLightbox'
 
 function monthLabel(lang: string, year: number, month: number) {
   const d = new Date(year, month - 1, 1)
@@ -52,6 +57,7 @@ export function Gallery() {
   const [category, setCategory] = useState<string | 'all'>('all')
   const [year, setYear] = useState<number | 'all'>('all')
   const [month, setMonth] = useState<number | 'all'>('all')
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   useEffect(() => {
     fetchGallery()
@@ -75,6 +81,11 @@ export function Gallery() {
 
   const folders = useMemo(() => groupFiltered(filtered), [filtered])
 
+  const lightboxItems = useMemo(
+    () => folders.flatMap((folder) => folder.items),
+    [folders],
+  )
+
   const monthOptions = useMemo(() => {
     if (year === 'all') return []
     const months = new Set(
@@ -82,6 +93,11 @@ export function Gallery() {
     )
     return [...months].sort((a, b) => b - a)
   }, [items, year])
+
+  const openLightbox = (itemId: string) => {
+    const i = lightboxItems.findIndex((x) => x.id === itemId)
+    if (i >= 0) setLightboxIndex(i)
+  }
 
   return (
     <section id="gallery" className="bg-parchment py-16 md:py-24">
@@ -192,44 +208,92 @@ export function Gallery() {
                   </span>
                 </h3>
                 <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {folder.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-teak/10"
-                    >
-                      <div className="aspect-[4/3] overflow-hidden bg-parchment-dark">
-                        <img
-                          src={photoUrl(item.path)}
-                          alt={item.title}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <p className="font-medium text-teak-dark">{item.title}</p>
-                        <p
-                          className={`mt-1 text-xs text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
+                  {folder.items.map((item) => {
+                    const catLabel = labelForSlug(
+                      categories,
+                      item.category,
+                      lang,
+                    )
+                    const displayTitle = galleryDisplayTitle(
+                      item,
+                      categories,
+                      lang,
+                    )
+                    const showCustomTitle =
+                      displayTitle !== catLabel &&
+                      !isUuidLike(item.title.trim())
+
+                    return (
+                      <li
+                        key={item.id}
+                        className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-teak/10"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openLightbox(item.id)}
+                          className="group block w-full cursor-zoom-in text-left"
+                          aria-label={`${t.gallery.openPhoto}: ${displayTitle}`}
                         >
-                          {labelForSlug(categories, item.category, lang)}
-                        </p>
-                        <p className="mt-1 text-xs text-teak/60">
-                          {new Date(item.uploadedAt).toLocaleString(
-                            lang === 'te' ? 'te-IN' : 'en-IN',
-                            {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            },
-                          )}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
+                          <div className="flex min-h-[12rem] items-center justify-center bg-parchment-dark p-3 sm:min-h-[14rem]">
+                            <img
+                              src={photoUrl(item.path)}
+                              alt=""
+                              className="max-h-64 w-full object-contain transition duration-300 group-hover:scale-[1.02]"
+                              loading="lazy"
+                            />
+                          </div>
+                        </button>
+                        <div className="p-4">
+                          <p
+                            className={`font-medium text-teak-dark ${lang === 'te' ? 'font-telugu' : ''}`}
+                          >
+                            {showCustomTitle ? displayTitle : catLabel}
+                          </p>
+                          {showCustomTitle ? (
+                            <p
+                              className={`mt-1 text-xs text-teak ${lang === 'te' ? 'font-telugu' : ''}`}
+                            >
+                              {catLabel}
+                            </p>
+                          ) : null}
+                          <p className="mt-1 text-xs text-teak/60">
+                            {new Date(item.uploadedAt).toLocaleString(
+                              lang === 'te' ? 'te-IN' : 'en-IN',
+                              {
+                                dateStyle: 'medium',
+                                timeStyle: 'short',
+                              },
+                            )}
+                          </p>
+                        </div>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {lightboxIndex !== null && lightboxItems.length > 0 ? (
+          <GalleryLightbox
+            items={lightboxItems}
+            categories={categories}
+            index={lightboxIndex}
+            lang={lang}
+            labels={{
+              close: t.gallery.lightboxClose,
+              prev: t.gallery.lightboxPrev,
+              next: t.gallery.lightboxNext,
+              counter: (current, total) => `${current} / ${total}`,
+            }}
+            onClose={() => setLightboxIndex(null)}
+            onIndexChange={setLightboxIndex}
+          />
+        ) : null}
+      </AnimatePresence>
     </section>
   )
 }

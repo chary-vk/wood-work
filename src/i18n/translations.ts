@@ -23,6 +23,10 @@ export type Translations = {
     allMonths: string
     loading: string
     empty: string
+    lightboxClose: string
+    lightboxPrev: string
+    lightboxNext: string
+    openPhoto: string
   }
   callNow: string
   whatsapp: string
@@ -168,6 +172,10 @@ export const translations: Record<Lang, Translations> = {
       allMonths: 'All months',
       loading: 'Loading gallery…',
       empty: 'No photos yet. Check back soon.',
+      lightboxClose: 'Close gallery',
+      lightboxPrev: 'Previous photo',
+      lightboxNext: 'Next photo',
+      openPhoto: 'Open photo',
     },
     callNow: 'Call now',
     whatsapp: 'WhatsApp',
@@ -269,6 +277,10 @@ export const translations: Record<Lang, Translations> = {
       allMonths: 'అన్ని నెలలు',
       loading: 'గ్యాలరీ లోడ్ అవుతోంది…',
       empty: 'ఇంకా చిత్రాలు లేవు. త్వరలో చూడండి.',
+      lightboxClose: 'గ్యాలరీ మూసివేయి',
+      lightboxPrev: 'మునుపటి చిత్రం',
+      lightboxNext: 'తదుపరి చిత్రం',
+      openPhoto: 'చిత్రం తెరువు',
     },
     callNow: 'ఇప్పుడే కాల్',
     whatsapp: 'వాట్సాప్',

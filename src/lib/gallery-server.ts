@@ -7,7 +7,17 @@ import { categorySlugExists, listCategories } from './categories-server'
 import { ensureDb } from './ensure-db'
 import { db } from './db'
 import { galleryPhotos } from './schema'
-import { buildGalleryPayload, type GalleryItem } from './galleryUtils'
+import {
+  buildGalleryPayload,
+  isUuidLike,
+  type GalleryItem,
+} from './galleryUtils'
+
+function defaultPhotoTitle(filename: string) {
+  const base = filename.replace(/\.[^.]+$/, '').replace(/^\d+-/, '')
+  if (!base || isUuidLike(base)) return ''
+  return base.replace(/[-_]+/g, ' ')
+}
 
 function rowToItem(row: {
   id: string
@@ -72,7 +82,10 @@ export async function addGalleryPhotos(
     await db.insert(galleryPhotos).values({
       id: randomUUID(),
       category,
-      title: title?.trim() || file.name.replace(/\.[^.]+$/, ''),
+      title:
+        title?.trim() ||
+        defaultPhotoTitle(file.name) ||
+        'Gallery photo',
       imageUrl,
       uploadedAt,
     })
