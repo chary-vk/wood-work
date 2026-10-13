@@ -67,12 +67,31 @@ export async function deleteAdminUser(id: string) {
   return listAdminUsers()
 }
 
-export async function updateAdminPassword(id: string, password: string) {
+export async function updateAdminUser(
+  id: string,
+  input: { username?: string; password?: string },
+) {
   await ensureDb()
-  if (password.length < 8) throw new Error('Password must be at least 8 characters')
-  const passwordHash = await hashPassword(password)
-  await db
-    .update(adminUsers)
-    .set({ passwordHash })
-    .where(eq(adminUsers.id, id))
+  const patch: { username?: string; passwordHash?: string } = {}
+
+  if (input.username !== undefined) {
+    const name = input.username.trim()
+    if (name.length < 2) throw new Error('Username is too short')
+    patch.username = name
+  }
+
+  if (input.password !== undefined && input.password.length > 0) {
+    if (input.password.length < 8) {
+      throw new Error('Password must be at least 8 characters')
+    }
+    patch.passwordHash = await hashPassword(input.password)
+  }
+
+  if (Object.keys(patch).length === 0) return
+
+  try {
+    await db.update(adminUsers).set(patch).where(eq(adminUsers.id, id))
+  } catch {
+    throw new Error('Username already exists')
+  }
 }

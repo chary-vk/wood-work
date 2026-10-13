@@ -40,12 +40,15 @@ export async function deleteAdminUser(id: string) {
   return data.users
 }
 
-export async function resetAdminPassword(id: string, password: string) {
+export async function updateAdminUser(
+  id: string,
+  input: { username?: string; password?: string },
+) {
   const res = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify(input),
   })
   if (!res.ok) await parseError(res)
 }

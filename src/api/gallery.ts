@@ -74,3 +74,20 @@ export async function deletePhoto(id: string): Promise<void> {
     throw new Error(typeof data.error === 'string' ? data.error : 'Delete failed')
   }
 }
+
+export async function updatePhoto(
+  id: string,
+  input: { title?: string; category?: string },
+): Promise<GalleryPayload> {
+  const res = await fetch(`/api/gallery/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(typeof data.error === 'string' ? data.error : 'Update failed')
+  }
+  return data as GalleryPayload
+}

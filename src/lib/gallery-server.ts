@@ -81,6 +81,31 @@ export async function addGalleryPhotos(
   return listGalleryPayload()
 }
 
+export async function updateGalleryPhoto(
+  id: string,
+  input: { title?: string; category?: string },
+) {
+  await ensureDb()
+  const patch: { title?: string; category?: string } = {}
+  if (input.title !== undefined) {
+    const title = input.title.trim()
+    if (!title) throw new Error('Title is required')
+    patch.title = title
+  }
+  if (input.category !== undefined) {
+    const category = input.category.trim()
+    if (!(await categorySlugExists(category))) {
+      throw new Error('Invalid category')
+    }
+    patch.category = category
+  }
+  if (Object.keys(patch).length === 0) {
+    return listGalleryPayload()
+  }
+  await db.update(galleryPhotos).set(patch).where(eq(galleryPhotos.id, id))
+  return listGalleryPayload()
+}
+
 export async function deleteGalleryPhoto(id: string) {
   await db.delete(galleryPhotos).where(eq(galleryPhotos.id, id))
 }

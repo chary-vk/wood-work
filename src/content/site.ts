@@ -87,6 +87,9 @@ export const site = {
       image: '/images/craft/07-tables.jpg',
     },
   ],
+  /** Wide shop sign + craft collage (hero right panel) */
+  heroBanner: '/images/hero-banner.png',
+  /** Carved door — about carousel & legacy refs */
   heroImage: '/images/hero-main-door.jpg',
   developer: {
     name: 'Adwaith Brahma Tech solutions',

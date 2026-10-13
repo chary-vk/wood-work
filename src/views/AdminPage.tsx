@@ -7,7 +7,8 @@ import {
   deleteGalleryCategory,
   fetchAdminCategories,
   fetchAdminUsers,
-  resetAdminPassword,
+  updateAdminUser,
+  updateGalleryCategory,
   type AdminUser,
 } from '@/api/admin'
 import {
@@ -17,20 +18,44 @@ import {
   loginAdmin,
   logoutAdmin,
   photoUrl,
+  updatePhoto,
   uploadPhotos,
   type GalleryItem,
 } from '@/api/gallery'
 import type { GalleryCategory } from '@/lib/category-types'
-import { FolderTree, Images, LogOut, Trash2, Upload, UserPlus, Users } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  FolderTree,
+  Images,
+  LogOut,
+  Pencil,
+  Trash2,
+  Upload,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 
 type Tab = 'gallery' | 'categories' | 'users'
 
+type CategoryDraft = {
+  labelEn: string
+  labelTe: string
+  blurbEn: string
+  blurbTe: string
+  imageUrl: string
+  sortOrder: number
+}
+
 const inputClass =
   'mt-1 w-full rounded-xl border border-teak/20 px-3 py-2 text-sm text-teak-dark'
 const btnPrimary =
   'rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-teak-dark hover:bg-gold-light disabled:opacity-50'
+const btnSecondary =
+  'rounded-lg border border-teak/20 px-3 py-1.5 text-sm font-medium text-teak-dark hover:bg-parchment disabled:opacity-50'
 
 export function AdminPage() {
   const [loggedIn, setLoggedIn] = useState(false)
@@ -58,6 +83,17 @@ export function AdminPage() {
   const [catBlurbEn, setCatBlurbEn] = useState('')
   const [catBlurbTe, setCatBlurbTe] = useState('')
   const [catImage, setCatImage] = useState('')
+
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [categoryDraft, setCategoryDraft] = useState<CategoryDraft | null>(null)
+
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null)
+  const [photoTitle, setPhotoTitle] = useState('')
+  const [photoCategory, setPhotoCategory] = useState('')
+
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [editUserName, setEditUserName] = useState('')
+  const [editUserPass, setEditUserPass] = useState('')
 
   useEffect(() => {
     fetchAdminSession()
@@ -136,12 +172,45 @@ export function AdminPage() {
     }
   }
 
+  const startEditPhoto = (item: GalleryItem) => {
+    setEditingPhotoId(item.id)
+    setPhotoTitle(item.title)
+    setPhotoCategory(item.category)
+  }
+
+  const cancelEditPhoto = () => {
+    setEditingPhotoId(null)
+    setPhotoTitle('')
+    setPhotoCategory('')
+  }
+
+  const savePhotoEdit = async () => {
+    if (!editingPhotoId) return
+    setBusy(true)
+    setMessage('')
+    try {
+      const data = await updatePhoto(editingPhotoId, {
+        title: photoTitle,
+        category: photoCategory,
+      })
+      setItems(data.items)
+      setCategories(data.categories)
+      cancelEditPhoto()
+      setMessage('Photo updated.')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Update failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleDeletePhoto = async (id: string) => {
     if (!confirm('Remove this photo from the gallery?')) return
     setBusy(true)
     setMessage('')
     try {
       await deletePhoto(id)
+      if (editingPhotoId === id) cancelEditPhoto()
       await loadGallery()
       setMessage('Photo removed.')
     } catch (err) {
@@ -167,30 +236,47 @@ export function AdminPage() {
     }
   }
 
+  const startEditUser = (u: AdminUser) => {
+    setEditingUserId(u.id)
+    setEditUserName(u.username)
+    setEditUserPass('')
+  }
+
+  const cancelEditUser = () => {
+    setEditingUserId(null)
+    setEditUserName('')
+    setEditUserPass('')
+  }
+
+  const saveUserEdit = async () => {
+    if (!editingUserId) return
+    setBusy(true)
+    setMessage('')
+    try {
+      await updateAdminUser(editingUserId, {
+        username: editUserName,
+        password: editUserPass || undefined,
+      })
+      await loadUsers()
+      cancelEditUser()
+      setMessage('User updated.')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Update failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleDeleteUser = async (id: string) => {
     if (!confirm('Delete this admin user?')) return
     setBusy(true)
     setMessage('')
     try {
       setUsers(await deleteAdminUser(id))
+      if (editingUserId === id) cancelEditUser()
       setMessage('User removed.')
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Delete failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleResetPassword = async (id: string) => {
-    const next = prompt('New password (min 8 characters):')
-    if (!next) return
-    setBusy(true)
-    setMessage('')
-    try {
-      await resetAdminPassword(id, next)
-      setMessage('Password updated.')
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Update failed')
     } finally {
       setBusy(false)
     }
@@ -225,12 +311,74 @@ export function AdminPage() {
     }
   }
 
+  const startEditCategory = (c: GalleryCategory) => {
+    setEditingCategoryId(c.id)
+    setCategoryDraft({
+      labelEn: c.labelEn,
+      labelTe: c.labelTe,
+      blurbEn: c.blurbEn,
+      blurbTe: c.blurbTe,
+      imageUrl: c.imageUrl ?? '',
+      sortOrder: c.sortOrder,
+    })
+  }
+
+  const cancelEditCategory = () => {
+    setEditingCategoryId(null)
+    setCategoryDraft(null)
+  }
+
+  const saveCategoryEdit = async () => {
+    if (!editingCategoryId || !categoryDraft) return
+    setBusy(true)
+    setMessage('')
+    try {
+      setCategories(
+        await updateGalleryCategory(editingCategoryId, {
+          labelEn: categoryDraft.labelEn,
+          labelTe: categoryDraft.labelTe,
+          blurbEn: categoryDraft.blurbEn,
+          blurbTe: categoryDraft.blurbTe,
+          imageUrl: categoryDraft.imageUrl || null,
+          sortOrder: categoryDraft.sortOrder,
+        }),
+      )
+      cancelEditCategory()
+      await loadGallery()
+      setMessage('Category updated.')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Update failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const moveCategory = async (index: number, direction: -1 | 1) => {
+    const j = index + direction
+    if (j < 0 || j >= categories.length) return
+    const a = categories[index]
+    const b = categories[j]
+    setBusy(true)
+    setMessage('')
+    try {
+      await updateGalleryCategory(a.id, { sortOrder: b.sortOrder })
+      await updateGalleryCategory(b.id, { sortOrder: a.sortOrder })
+      setCategories(await fetchAdminCategories())
+      setMessage('Order updated.')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not reorder')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleDeleteCategory = async (id: string) => {
     if (!confirm('Delete this category?')) return
     setBusy(true)
     setMessage('')
     try {
       setCategories(await deleteGalleryCategory(id))
+      if (editingCategoryId === id) cancelEditCategory()
       await loadGallery()
       setMessage('Category removed.')
     } catch (err) {
@@ -323,7 +471,7 @@ export function AdminPage() {
               Site admin
             </h1>
             <p className="text-sm text-teak">
-              Gallery photos, image categories, and admin accounts.
+              Edit gallery photos, categories, and admin users.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -430,24 +578,84 @@ export function AdminPage() {
                       alt=""
                       className="aspect-[4/3] w-full object-cover"
                     />
-                    <div className="flex items-start justify-between gap-2 p-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-teak-dark">
-                          {item.title}
-                        </p>
-                        <p className="truncate text-xs text-teak">
-                          {categoryTitle(item.category)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleDeletePhoto(item.id)}
-                        className="shrink-0 rounded-lg p-2 text-red-700 hover:bg-red-50"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <div className="p-3">
+                      {editingPhotoId === item.id ? (
+                        <div className="space-y-2">
+                          <label className="block">
+                            <span className="text-xs font-medium text-teak">Title</span>
+                            <input
+                              value={photoTitle}
+                              onChange={(e) => setPhotoTitle(e.target.value)}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-xs font-medium text-teak">
+                              Category
+                            </span>
+                            <select
+                              value={photoCategory}
+                              onChange={(e) => setPhotoCategory(e.target.value)}
+                              className={inputClass}
+                            >
+                              {categories.map((c) => (
+                                <option key={c.id} value={c.slug}>
+                                  {c.labelEn}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={savePhotoEdit}
+                              className={btnPrimary}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={cancelEditPhoto}
+                              className={btnSecondary}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-teak-dark">
+                              {item.title}
+                            </p>
+                            <p className="truncate text-xs text-teak">
+                              {categoryTitle(item.category)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => startEditPhoto(item)}
+                              className="rounded-lg p-2 text-teak-dark hover:bg-parchment"
+                              aria-label="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleDeletePhoto(item.id)}
+                              className="rounded-lg p-2 text-red-700 hover:bg-red-50"
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -466,7 +674,7 @@ export function AdminPage() {
                 Add category
               </h2>
               <p className="mt-1 text-sm text-teak">
-                Slug is used in URLs and filters (e.g. <code>custom-doors</code>).
+                Slug cannot be changed after creation (used by gallery photos).
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="block">
@@ -528,28 +736,158 @@ export function AdminPage() {
             </form>
 
             <ul className="space-y-3">
-              {categories.map((c) => (
+              {categories.map((c, index) => (
                 <li
                   key={c.id}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-white p-4 ring-1 ring-teak/10"
+                  className="rounded-xl bg-white p-4 ring-1 ring-teak/10"
                 >
-                  <div>
-                    <p className="font-medium text-teak-dark">
-                      {c.labelEn}{' '}
-                      <span className="text-sm font-normal text-teak">
-                        ({c.slug})
-                      </span>
-                    </p>
-                    <p className="text-sm text-teak">{c.labelTe}</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDeleteCategory(c.id)}
-                    className="rounded-lg px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
+                  {editingCategoryId === c.id && categoryDraft ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-teak">
+                        Slug: <code>{c.slug}</code> (fixed)
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-sm font-medium">Label (English)</span>
+                          <input
+                            value={categoryDraft.labelEn}
+                            onChange={(e) =>
+                              setCategoryDraft({
+                                ...categoryDraft,
+                                labelEn: e.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-sm font-medium">Label (Telugu)</span>
+                          <input
+                            value={categoryDraft.labelTe}
+                            onChange={(e) =>
+                              setCategoryDraft({
+                                ...categoryDraft,
+                                labelTe: e.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className="block sm:col-span-2">
+                          <span className="text-sm font-medium">Image URL</span>
+                          <input
+                            value={categoryDraft.imageUrl}
+                            onChange={(e) =>
+                              setCategoryDraft({
+                                ...categoryDraft,
+                                imageUrl: e.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className="block sm:col-span-2">
+                          <span className="text-sm font-medium">Blurb (English)</span>
+                          <input
+                            value={categoryDraft.blurbEn}
+                            onChange={(e) =>
+                              setCategoryDraft({
+                                ...categoryDraft,
+                                blurbEn: e.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className="block sm:col-span-2">
+                          <span className="text-sm font-medium">Blurb (Telugu)</span>
+                          <input
+                            value={categoryDraft.blurbTe}
+                            onChange={(e) =>
+                              setCategoryDraft({
+                                ...categoryDraft,
+                                blurbTe: e.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={saveCategoryEdit}
+                          className={btnPrimary}
+                        >
+                          Save changes
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={cancelEditCategory}
+                          className={btnSecondary}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-teak-dark">
+                          {c.labelEn}{' '}
+                          <span className="text-sm font-normal text-teak">
+                            ({c.slug})
+                          </span>
+                        </p>
+                        <p className="text-sm text-teak">{c.labelTe}</p>
+                        {c.blurbEn ? (
+                          <p className="mt-1 text-xs text-teak/80 line-clamp-2">
+                            {c.blurbEn}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={busy || index === 0}
+                          onClick={() => moveCategory(index, -1)}
+                          className="rounded-lg p-2 text-teak hover:bg-parchment disabled:opacity-30"
+                          aria-label="Move up"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy || index === categories.length - 1}
+                          onClick={() => moveCategory(index, 1)}
+                          className="rounded-lg p-2 text-teak hover:bg-parchment disabled:opacity-30"
+                          aria-label="Move down"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => startEditCategory(c)}
+                          className="rounded-lg p-2 text-teak-dark hover:bg-parchment"
+                          aria-label="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleDeleteCategory(c.id)}
+                          className="rounded-lg p-2 text-red-700 hover:bg-red-50"
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -595,34 +933,79 @@ export function AdminPage() {
 
             <ul className="divide-y divide-teak/10 rounded-xl bg-white ring-1 ring-teak/10">
               {users.map((u) => (
-                <li
-                  key={u.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-teak-dark">{u.username}</p>
-                    <p className="text-xs text-teak">
-                      Added {new Date(u.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleResetPassword(u.id)}
-                      className="rounded-lg border border-teak/20 px-3 py-1.5 text-sm text-teak-dark"
-                    >
-                      Reset password
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleDeleteUser(u.id)}
-                      className="rounded-lg px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <li key={u.id} className="px-4 py-3">
+                  {editingUserId === u.id ? (
+                    <div className="space-y-3">
+                      <label className="block">
+                        <span className="text-sm font-medium">Username</span>
+                        <input
+                          value={editUserName}
+                          onChange={(e) => setEditUserName(e.target.value)}
+                          className={inputClass}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-sm font-medium">
+                          New password (optional)
+                        </span>
+                        <input
+                          type="password"
+                          value={editUserPass}
+                          onChange={(e) => setEditUserPass(e.target.value)}
+                          placeholder="Leave blank to keep current"
+                          minLength={8}
+                          className={inputClass}
+                        />
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={saveUserEdit}
+                          className={btnPrimary}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={cancelEditUser}
+                          className={btnSecondary}
+                        >
+                          <X className="mr-1 inline h-4 w-4" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-teak-dark">{u.username}</p>
+                        <p className="text-xs text-teak">
+                          Added {new Date(u.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => startEditUser(u)}
+                          className={btnSecondary}
+                        >
+                          <Pencil className="mr-1 inline h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="rounded-lg px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
