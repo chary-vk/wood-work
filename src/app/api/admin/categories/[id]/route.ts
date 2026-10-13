@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { deleteCategory, updateCategory } from '@/lib/categories-server'
 import { requireAdmin } from '@/lib/require-admin'
 import { NextResponse } from 'next/server'

@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { requireAdmin } from '@/lib/require-admin'
 import { deleteAdminUser, updateAdminUser } from '@/lib/users-server'
 import { NextResponse } from 'next/server'

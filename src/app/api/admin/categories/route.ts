@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { createCategory, listCategories } from '@/lib/categories-server'
 import { requireAdmin } from '@/lib/require-admin'
 import { NextResponse } from 'next/server'

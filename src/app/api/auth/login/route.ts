@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { createSessionToken, SESSION_COOKIE } from '@/lib/auth'
 import { authenticateAdmin } from '@/lib/users-server'
 import { NextResponse } from 'next/server'

@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { isAdminSession } from '@/lib/auth'
 import { ensureDb } from '@/lib/ensure-db'
 import { addGalleryPhotos, listGalleryPayload } from '@/lib/gallery-server'
